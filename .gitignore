@@ -1,0 +1,40 @@
+# Secrets — never commit
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Evaluation outputs & checkpoints (often large / contain PII)
+outputs/
+checkpoints/
+*.pkl
+*.pickle
+
+# Data files (HotpotQA is large; users download separately)
+data/
+*.json.gz
+hotpot_*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,23 @@
+# ── LLM / Embeddings ──────────────────────────────────────────────────────────
+openai>=1.30.0               # OpenAI-compatible client (works with Azure, Ollama, etc.)
+sentence-transformers>=2.7.0 # Local embeddings ("local" mode, no API key needed)
+
+# ── NLP & Evaluation Metrics ──────────────────────────────────────────────────
+nltk>=3.8.1                  # Sentence tokenization (punkt model required)
+rouge-score>=0.1.2           # ROUGE-L metric
+rank-bm25>=0.2.2             # BM25 keyword retrieval for hybrid search
+
+# ── ML / Numerics ─────────────────────────────────────────────────────────────
+numpy>=1.26.0
+scikit-learn>=1.4.0          # Cosine similarity, KMeans, PCA, silhouette score
+pandas>=2.2.0
+
+# ── Visualization ─────────────────────────────────────────────────────────────
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.20.0               # Interactive charts in notebook
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+tqdm>=4.66.0                 # Progress bars
+python-dateutil>=2.9.0
+python-dotenv>=1.0.0         # Load .env into os.environ (used by config.py)
