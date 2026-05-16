@@ -4,19 +4,22 @@ Configuration for the RAG evaluation framework.
 All secrets are read from environment variables (never hardcoded).
 Copy .env.example → .env and fill in your provider details.
 
-Provider compatibility
-----------------------
-This framework uses the standard OpenAI Python client with a configurable
-base_url, making it compatible with any OpenAI-compatible endpoint:
+Provider auto-detection
+-----------------------
+Set OPENAI_API_VERSION to activate Azure OpenAI mode.
+Leave it blank for OpenAI (direct) or any other OpenAI-compatible endpoint.
 
-  Provider          OPENAI_BASE_URL
-  ──────────────── ──────────────────────────────────────────────
-  OpenAI (direct)  https://api.openai.com/v1
-  Azure OpenAI     https://<resource>.openai.azure.com/openai/deployments/<deploy>
-  Ollama (local)   http://localhost:11434/v1
-  Together AI      https://api.together.xyz/v1
-  Groq             https://api.groq.com/openai/v1
-  LM Studio        http://localhost:1234/v1
+  Provider          OPENAI_API_VERSION   Client used
+  ──────────────── ─────────────────── ────────────────
+  OpenAI (direct)  (blank)              openai.OpenAI
+  Azure OpenAI     2025-04-01-preview   openai.AzureOpenAI
+  Ollama (local)   (blank)              openai.OpenAI
+  Together AI      (blank)              openai.OpenAI
+  Groq             (blank)              openai.OpenAI
+  LM Studio        (blank)              openai.OpenAI
+
+Call Config.create_client() to get the correctly configured client.
+See docs/provider-setup.md for step-by-step setup for each provider.
 """
 
 import os
@@ -31,11 +34,12 @@ class Config:
     """Framework-wide configuration. Override any value via environment variables."""
 
     # =========================================================================
-    # LLM PROVIDER — reads from .env, works with any OpenAI-compatible endpoint
+    # LLM PROVIDER
     # =========================================================================
     API_KEY      = os.environ.get("OPENAI_API_KEY", "")
     BASE_URL     = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    API_VERSION  = os.environ.get("OPENAI_API_VERSION", "")   # Required for Azure; blank otherwise
+    # Azure OpenAI only — leave blank for all other providers
+    API_VERSION  = os.environ.get("OPENAI_API_VERSION", "")
 
     # =========================================================================
     # MODEL CONFIGURATION
@@ -247,6 +251,45 @@ class Config:
     GENERATE_EXECUTIVE_REPORT = True
     EXPORT_TO_GITHUB_FORMAT   = True
     INCLUDE_VISUALIZATIONS    = True
+
+    # =========================================================================
+    # CLIENT FACTORY
+    # =========================================================================
+
+    @classmethod
+    def create_client(cls):
+        """
+        Return the correctly configured LLM client for the active provider.
+
+        Auto-detection rule:
+          OPENAI_API_VERSION is set  →  Azure OpenAI  (openai.AzureOpenAI)
+          OPENAI_API_VERSION is blank →  OpenAI / any compatible endpoint  (openai.OpenAI)
+
+        Azure OpenAI:
+          BASE_URL  = https://<resource-name>.openai.azure.com   (resource endpoint only)
+          API_KEY   = key from Azure Portal → Keys and Endpoint
+          API_VERSION = e.g. 2025-04-01-preview
+
+        OpenAI (direct) / Ollama / Groq / Together / LM Studio:
+          BASE_URL  = provider's base URL (e.g. https://api.openai.com/v1)
+          API_KEY   = provider's API key
+          API_VERSION = (leave blank)
+        """
+        if cls.API_VERSION:
+            # Azure OpenAI — uses dedicated client that handles api-version and deployment routing
+            from openai import AzureOpenAI
+            return AzureOpenAI(
+                api_key=cls.API_KEY,
+                azure_endpoint=cls.BASE_URL,
+                api_version=cls.API_VERSION,
+            )
+        else:
+            # OpenAI (direct) or any OpenAI-compatible endpoint
+            from openai import OpenAI
+            return OpenAI(
+                api_key=cls.API_KEY,
+                base_url=cls.BASE_URL,
+            )
 
     # =========================================================================
     # UTILITIES

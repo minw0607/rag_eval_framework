@@ -216,29 +216,14 @@ python -m nltk.downloader punkt wordnet
 
 ```bash
 cp .env.example .env
-# Edit .env with your provider credentials
+# Uncomment the section for your provider and fill in your credentials
 ```
 
-Provider examples:
+The provider is **auto-detected** from `OPENAI_API_VERSION`:
+- **Set** → Azure OpenAI (`AzureOpenAI` client)
+- **Blank** → OpenAI direct or any compatible endpoint (`OpenAI` client)
 
-```bash
-# OpenAI (direct)
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_API_KEY=sk-...
-OPENAI_GENERATION_MODEL=gpt-4o
-
-# Azure OpenAI
-OPENAI_BASE_URL=https://<resource>.openai.azure.com/openai/deployments/<deploy>
-OPENAI_API_KEY=<azure-key>
-OPENAI_API_VERSION=2025-04-01-preview
-OPENAI_GENERATION_MODEL=gpt-4o
-
-# Ollama (local, free)
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama
-OPENAI_GENERATION_MODEL=llama3
-EMBEDDING_CHOICE=local   # use sentence-transformers, no API needed
-```
+See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step instructions, differences between providers, and troubleshooting.
 
 ### 3. Download HotpotQA data
 
@@ -278,6 +263,9 @@ llm-eval-framework/
 │   ├── vector_store.py            ← BM25 + dense hybrid retrieval
 │   └── rag_system.py              ← Answer generation with quality gates
 │
+├── docs/
+│   └── provider-setup.md          ← Step-by-step setup for Azure, OpenAI, Ollama, Groq
+│
 ├── outputs/                       ← Evaluation results (gitignored)
 └── checkpoints/                   ← Vector store + eval checkpoints (gitignored)
 ```
@@ -286,14 +274,25 @@ llm-eval-framework/
 
 ## Provider Compatibility
 
+The framework auto-detects your provider from `.env` — no code changes required.
+
+| `OPENAI_API_VERSION` | Provider | SDK client |
+|---|---|---|
+| Set (e.g. `2025-04-01-preview`) | Azure OpenAI | `openai.AzureOpenAI` |
+| Blank | OpenAI / Ollama / Groq / etc. | `openai.OpenAI` |
+
+**Supported providers:**
+
 | Provider | `OPENAI_BASE_URL` | Notes |
 |---|---|---|
-| OpenAI | `https://api.openai.com/v1` | Standard |
-| Azure OpenAI | `https://<resource>.openai.azure.com/openai/deployments/<deploy>` | Set `OPENAI_API_VERSION` |
-| Ollama | `http://localhost:11434/v1` | Set `EMBEDDING_CHOICE=local` |
-| Together AI | `https://api.together.xyz/v1` | — |
-| Groq | `https://api.groq.com/openai/v1` | — |
-| LM Studio | `http://localhost:1234/v1` | — |
+| **Azure OpenAI** | `https://<resource>.openai.azure.com` | Set `OPENAI_API_VERSION` |
+| **OpenAI (direct)** | `https://api.openai.com/v1` | — |
+| **Ollama** (local) | `http://localhost:11434/v1` | Set `EMBEDDING_CHOICE=local` |
+| **Groq** | `https://api.groq.com/openai/v1` | — |
+| **Together AI** | `https://api.together.xyz/v1` | — |
+| **LM Studio** | `http://localhost:1234/v1` | — |
+
+See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step setup, Azure vs OpenAI differences, and troubleshooting.
 
 ---
 
