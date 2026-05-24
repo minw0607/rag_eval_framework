@@ -4,7 +4,7 @@
 
 **A provider-agnostic RAG evaluation framework benchmarked on HotpotQA**
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/minw0607/llm-eval-framework/blob/main/notebooks/rag_eval_hotpotqa_demo.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/minw0607/rag_eval_framework/blob/main/notebooks/rag_eval_hotpotqa_demo.ipynb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Azure OpenAI](https://img.shields.io/badge/Azure-OpenAI-0078D4?logo=microsoftazure)](docs/provider-setup.md)
@@ -434,6 +434,6 @@ And the RAGAS faithfulness metric:
 <div align="center">
 
 Made with ❤️ for rigorous, reproducible RAG evaluation  
-[Open an issue](https://github.com/minw0607/llm-eval-framework/issues) · [Provider setup guide](docs/provider-setup.md)
+[Open an issue](https://github.com/minw0607/rag_eval_framework/issues) · [Provider setup guide](docs/provider-setup.md)
 
 </div>
