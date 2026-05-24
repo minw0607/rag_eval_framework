@@ -37,6 +37,7 @@ Limitations
 """
 
 import re
+import warnings
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 
@@ -61,7 +62,9 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
 def _cosine_matrix(A: np.ndarray, B: np.ndarray) -> np.ndarray:
     """Cosine similarity matrix (M x N) for M row-vectors in A and N in B."""
     if _HAS_SKLEARN:
-        return sk_cosine(A, B)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return sk_cosine(A, B)
     norms_a = np.linalg.norm(A, axis=1, keepdims=True) + 1e-9
     norms_b = np.linalg.norm(B, axis=1, keepdims=True) + 1e-9
     return (A / norms_a) @ (B / norms_b).T

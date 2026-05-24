@@ -40,6 +40,14 @@ class Config:
     BASE_URL     = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
     # Azure OpenAI only — leave blank for all other providers
     API_VERSION  = os.environ.get("OPENAI_API_VERSION", "")
+    # Custom gateway header (APIM or other proxy) — leave both blank for standard Azure OpenAI.
+    # Some Azure API Management gateways require a custom subscription-key header
+    # whose name differs from the standard "Ocp-Apim-Subscription-Key".
+    # Example: Atlas gateway uses "YourGatewayPath-Subscription-Key".
+    # OPENAI_APIM_HEADER_NAME  = name of the custom header  (e.g. YourGatewayPath-Subscription-Key)
+    # OPENAI_APIM_SUBSCRIPTION_KEY = value to send in that header (often same as OPENAI_API_KEY)
+    APIM_HEADER_NAME      = os.environ.get("OPENAI_APIM_HEADER_NAME", "")
+    APIM_SUBSCRIPTION_KEY = os.environ.get("OPENAI_APIM_SUBSCRIPTION_KEY", "")
 
     # =========================================================================
     # MODEL CONFIGURATION
@@ -265,10 +273,18 @@ class Config:
           OPENAI_API_VERSION is set  →  Azure OpenAI  (openai.AzureOpenAI)
           OPENAI_API_VERSION is blank →  OpenAI / any compatible endpoint  (openai.OpenAI)
 
-        Azure OpenAI:
-          BASE_URL  = https://<resource-name>.openai.azure.com   (resource endpoint only)
+        Azure OpenAI (standard endpoint):
+          BASE_URL  = https://<resource-name>.openai.azure.com
           API_KEY   = key from Azure Portal → Keys and Endpoint
           API_VERSION = e.g. 2025-04-01-preview
+
+        Azure via API Management (APIM) gateway:
+          BASE_URL  = https://<your-gateway-host>/<path>
+          API_KEY   = your gateway API key
+          API_VERSION = e.g. 2025-04-01-preview
+          APIM_HEADER_NAME = custom header name (e.g. YourGatewayPath-Subscription-Key)
+          APIM_SUBSCRIPTION_KEY = value for that header (often same as API_KEY)
+          The custom header is added automatically when APIM_HEADER_NAME is set.
 
         OpenAI (direct) / Ollama / Groq / Together / LM Studio:
           BASE_URL  = provider's base URL (e.g. https://api.openai.com/v1)
@@ -278,10 +294,20 @@ class Config:
         if cls.API_VERSION:
             # Azure OpenAI — uses dedicated client that handles api-version and deployment routing
             from openai import AzureOpenAI
+            # Read gateway header settings at call time (not class-import time) so they work
+            # even if load_dotenv() was called after Config was first imported.
+            apim_header_name = os.environ.get("OPENAI_APIM_HEADER_NAME", "") or cls.APIM_HEADER_NAME
+            apim_key         = os.environ.get("OPENAI_APIM_SUBSCRIPTION_KEY", "") or cls.APIM_SUBSCRIPTION_KEY
+            extra_headers = {}
+            if apim_header_name and apim_key:
+                # Some Azure APIM gateways require a custom subscription-key header.
+                # Header name and value are both configurable via env vars.
+                extra_headers[apim_header_name] = apim_key
             return AzureOpenAI(
-                api_key=cls.API_KEY,
-                azure_endpoint=cls.BASE_URL,
-                api_version=cls.API_VERSION,
+                api_key=os.environ.get("OPENAI_API_KEY", "") or cls.API_KEY,
+                azure_endpoint=os.environ.get("OPENAI_BASE_URL", "") or cls.BASE_URL,
+                api_version=os.environ.get("OPENAI_API_VERSION", "") or cls.API_VERSION,
+                default_headers=extra_headers if extra_headers else None,
             )
         else:
             # OpenAI (direct) or any OpenAI-compatible endpoint

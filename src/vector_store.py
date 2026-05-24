@@ -34,10 +34,17 @@ import pickle
 from pathlib import Path
 from typing import List, Dict, Optional
 
+import warnings
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity as _sk_cosine_similarity
 from rank_bm25 import BM25Okapi
 from tqdm import tqdm
+
+def cosine_similarity(A, B):
+    """Wrapper that suppresses sklearn numerical warnings on near-unit-norm vectors."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return _sk_cosine_similarity(A, B)
 
 
 class VectorStore:

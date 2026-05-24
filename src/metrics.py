@@ -42,7 +42,14 @@ import time
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 from collections import Counter
-from sklearn.metrics.pairwise import cosine_similarity
+import warnings as _warnings
+from sklearn.metrics.pairwise import cosine_similarity as _sk_cosine_similarity
+
+def cosine_similarity(A, B):
+    """Wrapper suppressing sklearn numerical warnings on near-unit-norm API embeddings."""
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        return _sk_cosine_similarity(A, B)
 
 
 class EvalMetrics:

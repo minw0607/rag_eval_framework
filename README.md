@@ -1,8 +1,20 @@
 # LLM Evaluation Framework
 
-**A provider-agnostic RAG evaluation framework benchmarked on HotpotQA.**
+<div align="center">
 
-> Plug in any OpenAI-compatible LLM (OpenAI, Azure OpenAI, Ollama, Groq, Together AI, LM Studio) and run a rigorous, reproducible evaluation of your RAG pipeline — 13 metrics, multi-prompt comparison, failure diagnosis, and cost tracking included.
+**A provider-agnostic RAG evaluation framework benchmarked on HotpotQA**
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/minw0607/llm-eval-framework/blob/main/notebooks/rag_eval_hotpotqa_demo.ipynb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Azure OpenAI](https://img.shields.io/badge/Azure-OpenAI-0078D4?logo=microsoftazure)](docs/provider-setup.md)
+[![OpenAI](https://img.shields.io/badge/OpenAI-Compatible-412991?logo=openai)](docs/provider-setup.md)
+[![Ollama](https://img.shields.io/badge/Ollama-Local-black)](docs/provider-setup.md)
+
+*Plug in any OpenAI-compatible LLM and run a rigorous, reproducible evaluation of your RAG pipeline —*  
+*13 metrics · multi-prompt comparison · failure diagnosis · cost tracking · auto-generated audit report*
+
+</div>
 
 ---
 
@@ -10,109 +22,102 @@
 
 Most RAG evaluation toolkits answer one question: *"Is the answer correct?"*
 
-This framework answers five:
+This framework answers **five** — and generates an audit-ready report that tells you *why*:
 
 | Question | How |
 |---|---|
 | Is the answer **correct**? | F1, exact match, ROUGE-L |
-| Is it **grounded** in the retrieved documents? | Embedding MiniMax similarity |
+| Is it **grounded** in retrieved documents? | MiniMax embedding similarity |
 | Does it **cover** the key information? | 2-tier completeness cascade |
 | Does it **faithfully** represent the context? | RAGAS LLM-as-judge |
-| What does it **cost** to run and to monitor? | Separated generation vs evaluation cost |
+| What does it **cost** to run and monitor? | Generation vs. evaluation cost separation |
 
-The completeness cascade and the cost separation are the novel contributions — see [Design Decisions](#design-decisions) below.
+> **Novel contributions:** The completeness cascade and the generation/evaluation cost separation are purpose-built for production RAG monitoring — not found in standard evaluation toolkits.
 
 ---
 
-## Pipeline
+## At a Glance
 
-```mermaid
-flowchart LR
-    subgraph Data
-        A[HotpotQA\ndataset]
-    end
-    subgraph Retrieval
-        B[VectorStore\nBM25 + dense\nhybrid]
-    end
-    subgraph Generation
-        C[EnhancedRAGSystem\n4 prompt variants\ntemp=0.2 top-k=20]
-    end
-    subgraph Evaluation
-        D[EvalMetrics\n13 metrics]
-        E[QualityGuard\nreal-time gate]
-        F[CostTracker\ngen vs eval]
-    end
-    subgraph Diagnosis
-        G[LowQualityInvestigator\n16 patterns + k-means]
-    end
-
-    A --> B --> C --> D
-    C --> E --> D
-    D --> F
-    D --> G
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RAG Evaluation Pipeline                             │
+├──────────┬────────────────┬─────────────────────────┬───────────────────────┤
+│  DATA    │   RETRIEVAL    │      GENERATION          │     EVALUATION        │
+│          │                │                          │                       │
+│ HotpotQA │ Hybrid BM25 +  │ 4 prompt variants        │ 13 metrics            │
+│ multi-hop│ dense (60/40)  │ temp=0.2  top-k=20       │ QualityGuard gate     │
+│ benchmark│ top-k=20       │ baseline / concise /     │ Failure investigator  │
+│          │                │ detailed / citation      │ Cost tracker          │
+│          │                │                          │ Audit report          │
+└──────────┴────────────────┴─────────────────────────┴───────────────────────┘
 ```
 
 ---
 
 ## 13 Evaluation Metrics
 
+Metrics are grouped into three categories that map directly to the report sections:
+
+### 🎯 Correctness
+
 | # | Metric | Method | Cost |
 |---|--------|--------|------|
 | 1 | **Exact Match** | Token normalization | Free |
-| 2 | **F1 Score** | Bag-of-words overlap + partial match | Free |
+| 2 | **F1 Score** | Bag-of-words overlap + partial match bonus | Free |
 | 3 | **Contains Match** | Gold answer substring in prediction | Free |
 | 4 | **ROUGE-L** | Longest common subsequence | Free |
-| 5 | **Answer Relevance** | cosine\_sim(answer, question) | Embedding |
-| 6 | **Context Relevance** | cosine\_sim(context, question) | Embedding |
-| 7 | **Groundedness** | MiniMax avg\_i max\_j sim(ans\_sent\_i, ctx\_sent\_j) | Embedding |
-| 8 | **RAGAS Faithfulness** | Atomic claim extraction → LLM entailment check | LLM |
-| 9 | **Completeness** | 2-tier cascade (see below) | Embedding + conditional LLM |
-| 10 | **Conciseness** | Length penalty vs question length | Free |
-| 11 | **Refusal Detection** | Phrase-pattern regex | Free |
-| 12 | **SNR** | Ratio of context-grounded tokens | Free |
-| 13 | **Quality Score** | Weighted composite (configurable weights) | — |
+
+### 📊 Answer Quality
+
+| # | Metric | Method | Cost |
+|---|--------|--------|------|
+| 5 | **Answer Relevance** | cosine_sim(answer, question) | Embedding |
+| 6 | **Completeness** | 2-tier cascade — see below | Embedding + conditional LLM |
+| 7 | **Conciseness** | Length penalty vs. question length | Free |
+| 8 | **Refusal Detection** | Phrase-pattern regex | Free |
+| 9 | **Quality Score** | Weighted composite (configurable weights) | — |
+
+### 🔗 Attribution & Retrieval
+
+| # | Metric | Method | Cost |
+|---|--------|--------|------|
+| 10 | **Context Relevance** | cosine_sim(context, question) | Embedding |
+| 11 | **Groundedness** | MiniMax avg_i max_j sim(ans_sent_i, ctx_sent_j) | Embedding |
+| 12 | **RAGAS Faithfulness** | Atomic claim extraction → LLM entailment check | LLM |
+| 13 | **SNR** | Ratio of context-grounded tokens | Free |
 
 ---
 
 ## Completeness Cascade
 
-Completeness is the hardest metric to compute reliably. A single embedding score produces systematic false positives when:
-- The answer and context share vocabulary without factual overlap
-- The answer is very short but the context is rich (short answers need a different lens)
-
-The cascade addresses this with a **trigger-on-demand** design:
+Completeness is the hardest metric to compute reliably. A single embedding score produces systematic false positives when answers are short or share vocabulary with context without factual agreement. The cascade fixes this with a **trigger-on-demand** design:
 
 ```
 Every answer
     │
     ▼
-Tier 1 — Question-Filtered Context Coverage  (embedding, always runs)
-    │  Filter context by cosine similarity to the question
+Tier 1 — Question-Filtered Context Coverage  (embedding, always runs, free-ish)
+    │  Filter context sentences by cosine similarity to the question
     │  Score = avg_i max_j sim(relevant_ctx_i, answer_sent_j)
     │
-    ├── Tier B trigger: |completeness − groundedness| > 0.3
-    │                   |completeness − faithfulness| > 0.3
-    │   (Cross-metric disagreement = embedding score may be unreliable)
+    ├── Trigger B: |completeness − groundedness| > 0.3   (cross-metric disagreement)
+    ├── Trigger C: answer < N words AND ≥ M relevant context sentences (short answer)
     │
-    ├── Tier C trigger: answer < N words AND ≥ M relevant context sentences
-    │   (Short answer over rich context = most prone to false positives)
-    │
-    └── If NO trigger → use Tier 1 score   ($0.00 extra)
-        If trigger fires →
+    └── No trigger → use Tier 1 score (zero extra cost)
+        Trigger fires →
             ▼
-        Tier 2 — LLM-as-judge  (conditional, overrides Tier 1)
-            Structured prompt: Score 0.0–1.0 + one-sentence reason
-            max_tokens=80 to minimise cost
-            Full audit trail per case
+        Tier 2 — LLM-as-judge  (conditional, ~20% of queries)
+            Structured prompt: score 0.0–1.0 + one-sentence reason
+            max_tokens=80 · full audit trail per case
 ```
 
-**In practice**, Tier 2 fires on ~20% of answers. The remaining 80% pay only the embedding cost of Tier 1.
+**In practice:** Tier 2 fires on ~20% of answers, keeping per-query LLM overhead at ~$0.000004.
 
 ---
 
 ## Multi-Prompt Comparison
 
-Every question is evaluated across four prompt strategies simultaneously:
+Every question is evaluated across **four prompt strategies simultaneously**:
 
 | Variant | Design intent | Expected F1 | Best for |
 |---------|---------------|-------------|----------|
@@ -123,14 +128,39 @@ Every question is evaluated across four prompt strategies simultaneously:
 
 ---
 
+## Auto-Generated Audit Report
+
+After evaluation, the framework generates a **structured Markdown report** in `reports/`:
+
+```
+reports/multi_prompt_eval_results_500_report.md
+│
+├── Executive Summary         — LLM-consolidated cross-section findings with causal chains
+├── § 2  Evaluation Scope     — System architecture, test data, coverage, regulatory alignment
+├── § 3  Evaluation Approach  — Metrics, sampling, completeness cascade, LLM judge policy
+├── § 4  Correctness          — F1/EM/ROUGE across variants + observations table
+├── § 5  Answer Quality       — Completeness, conciseness, refusals + observations table
+├── § 6  Attribution          — Groundedness, faithfulness, SNR + observations table
+├── § 7  Retrieval Quality    — Context relevance, hit rates + observations table
+├── § 8  Cost Analysis        — Generation vs. evaluation cost breakdown
+├── § 9  Failure Diagnosis    — 16 patterns + k-means clustering of unclassified failures
+├── §10  Cross-Section Analysis
+├── §11  Conclusions & Recommendations
+└── §12  Reproduction Steps
+```
+
+Each LLM-generated section carries an **AI disclosure notice** and is clearly separated from deterministic (audit-safe) observations. The report is designed to be submitted to model risk management review with SR 11-7 / SR 26-02 and NIST AI RMF cross-references in §2.4.
+
+---
+
 ## Failure Diagnosis
 
-Low-quality answers are automatically classified by a 3-layer investigator:
+Low-quality answers are automatically classified by a **3-layer investigator**:
 
 **Layer 1 — 16 rule-based patterns** (runs on all flagged answers):
 
-| Pattern | Signature | Diagnosis |
-|---------|-----------|-----------|
+| Pattern | Metric signature | Diagnosis |
+|---------|-----------------|-----------|
 | P1 | High F1 + Low Groundedness | Hallucinated details |
 | P2 | Low F1 + High Groundedness | Verbose / off-target |
 | P4 | Low Context Rel + Low Groundedness | Retrieval failure |
@@ -138,18 +168,18 @@ Low-quality answers are automatically classified by a 3-layer investigator:
 | P7 | Low F1 + Low Groundedness + Low Faithfulness | Hallucination (non-refusal) |
 | P9 | Refusal + Low Context Rel | Retrieval-driven refusal |
 | P10 | Refusal + High Context Rel | Over-conservative model |
-| P13 | Cascade escalated + still low | Cascade unable to rescue |
+| P13 | Cascade escalated + still low | Cascade cannot rescue |
 | … | … | … |
 
-**Layer 2 — k-means clustering** (UNK cases only): Groups unclassified failures by metric similarity for human review. Cluster centroids are surfaced as candidates for new rule-based patterns.
+**Layer 2 — k-means clustering** (UNK cases only): groups unclassified failures by metric similarity; cluster centroids surface as candidates for new rule-based patterns.
 
-**Layer 3 — Human review exports**: Cluster representatives exported as markdown for reviewer annotation.
+**Layer 3 — Human review exports**: cluster representatives exported as Markdown for reviewer annotation.
 
 ---
 
 ## Cost Separation
 
-The framework tracks two cost layers independently:
+The framework tracks two cost layers independently so you can answer: *"How much does my RAG pipeline cost in production, and how much does this monitoring add?"*
 
 ```
 GENERATION COST  — what your RAG system costs in production
@@ -157,10 +187,10 @@ GENERATION COST  — what your RAG system costs in production
 
 EVALUATION COST  — what this monitoring framework adds
   Embedding  : retrieval query, completeness Tier 1, groundedness
-  LLM judge  : RAGAS faithfulness, completeness Tier 2
+  LLM judge  : RAGAS faithfulness, completeness Tier 2 (~20% of queries)
 ```
 
-Sample output (2,000 questions, 4 prompt variants):
+Sample output (500 questions × 4 prompt variants = 2,000 answers):
 
 ```
 GENERATION COSTS (production):
@@ -170,7 +200,7 @@ EVALUATION COSTS (framework):
   embedding_retrieval            $0.0002  ($0.000000/q)
   embedding_completeness         $0.0008  ($0.000000/q)
   llm_judge_faithfulness         $0.0420  ($0.000021/q)
-  llm_judge_completeness         $0.0084  ($0.000004/q)   ← only 20% of queries
+  llm_judge_completeness         $0.0084  ($0.000004/q)  ← only ~20% of queries
   ─────────────────────────────────────────────────────
   Evaluation overhead            16.1% of total
 ```
@@ -179,64 +209,108 @@ EVALUATION COSTS (framework):
 
 ## Design Decisions
 
-**Temperature 0.2, not 1.0** — HotpotQA is a factoid benchmark. Deterministic generation produced measurably higher F1 and faithfulness. Temperature 1.0 was the single largest source of score variance in baseline experiments.
+**Temperature 0.2, not 1.0** — HotpotQA is a factoid benchmark. Deterministic generation produces measurably higher F1 and faithfulness. Temperature 1.0 was the single largest source of score variance in baseline experiments.
 
-**Top-K 20, not 5** — HotpotQA multi-hop questions require evidence from 2+ documents. K=5 caused frequent retrieval misses; K=20 with hybrid re-ranking captures both evidence documents reliably.
+**Top-K 20, not 5** — HotpotQA multi-hop questions require evidence from 2+ documents. K=5 caused frequent retrieval misses; K=20 with hybrid re-ranking captures both gold documents reliably.
 
-**Hybrid retrieval (BM25 + dense), not dense-only** — BM25 catches exact entity matches (person names, dates, locations) that semantic embeddings sometimes miss. The 60/40 semantic/keyword split was tuned empirically on HotpotQA dev set.
+**Hybrid retrieval (BM25 + dense, 60/40), not dense-only** — BM25 catches exact entity matches (names, dates, locations) that semantic embeddings sometimes miss. The split was tuned empirically on the HotpotQA dev set.
 
-**Completeness cascade, not a single score** — A single embedding completeness score is unreliable for short answers and fails silently when context and answer share vocabulary without factual agreement. The cascade triggers LLM verification only when the evidence suggests the embedding score is wrong, keeping per-query LLM overhead at ~$0.000004.
+**Completeness cascade, not a single score** — A single embedding completeness score fails silently for short answers and when context shares vocabulary without factual agreement. The cascade triggers LLM verification only when evidence suggests the embedding score is unreliable.
 
-**QualityGuard runs before cost tracking** — Real-time quality gates catch failures before they skew aggregate metrics. A hallucinated answer that passes F1 (because the LLM correctly guessed the answer from parametric knowledge) is still flagged as ungrounded.
+**QualityGuard runs before cost tracking** — The real-time gate catches failures before they skew aggregate metrics. Answers that pass F1 by coincidence (parametric LLM knowledge, not retrieval) are still flagged as ungrounded.
 
 ---
 
 ## Limitations
 
-- **LLM-as-judge bias**: RAGAS faithfulness and completeness Tier 2 use the same model that generated the answer. Self-evaluation introduces a bias toward higher scores on confident (but wrong) answers. A separate judge model is preferable when budget allows.
-- **HotpotQA scope**: The framework is designed for extractive/factoid QA. For generative tasks (summarisation, creative writing) the F1 and exact match metrics are not meaningful; faithfulness and completeness remain applicable.
-- **Local embedding quality**: `EMBEDDING_CHOICE=local` (sentence-transformers all-mpnet-base-v2, 768 dims) produces ~10% lower groundedness and completeness scores than API embeddings. Scores are not comparable across embedding modes.
-- **BM25 on tokenised text**: BM25 does not handle morphological variation (run/runs/running). For non-English corpora, replace the whitespace tokeniser with a language-appropriate tokeniser.
-- **No async execution**: The evaluation loop is synchronous. For large corpora (>10k questions), parallelise across questions at the process level, not within the notebook.
+- **LLM-as-judge bias**: RAGAS faithfulness and completeness Tier 2 use the same model that generated the answer. Self-evaluation biases toward higher scores on confident-but-wrong answers. A separate judge model is preferable when budget allows.
+- **HotpotQA scope**: Optimised for extractive/factoid QA. For generative tasks (summarisation, creative writing), F1 and exact match are not meaningful — faithfulness and completeness remain applicable.
+- **Local embedding quality**: `EMBEDDING_CHOICE=local` (all-mpnet-base-v2, 768 dims) produces ~10% lower groundedness and completeness scores than API embeddings. Scores are not directly comparable across embedding modes.
+- **BM25 tokenisation**: BM25 does not handle morphological variation. For non-English corpora, replace the whitespace tokeniser with a language-appropriate tokeniser.
+- **Synchronous execution**: The evaluation loop is single-threaded. For large corpora (>10k questions), parallelise at the process level, not within the notebook.
 
 ---
 
 ## Quickstart
 
-### 1. Install dependencies
+### Option A — Google Colab (no local install)
+
+> **Azure OpenAI with IP allowlisting:** Colab runs on Google Cloud — its IPs are typically not on corporate allowlists. Use Option B (local) for Azure deployments behind a firewall.
+
+Click the **Open in Colab** badge at the top of this README. Then:
+
+**Step 1 — Get the HotpotQA data**
+
+Download `hotpot_train_v1.1.json` from [hotpotqa.github.io](https://hotpotqa.github.io/) (~540 MB) and upload it to your Google Drive:
+
+```
+My Drive/data/hotpot_train_v1.1.json
+```
+
+**Step 2 — Add Colab Secrets** (🔑 key icon in left sidebar → "Add new secret")
+
+| Secret name | Example value |
+|---|---|
+| `OPENAI_API_KEY` | `sk-...` |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` |
+| `OPENAI_API_VERSION` | `2025-04-01-preview` *(Azure only — leave blank for OpenAI)* |
+| `OPENAI_GENERATION_MODEL` | `gpt-4o` |
+| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` |
+| `HOTPOTQA_DATA_PATH` | `/content/drive/MyDrive/data/hotpot_train_v1.1.json` |
+
+Secrets are stored once in your Colab account and never appear in notebook output.
+
+**Step 3 — Run all cells in order**
+
+The notebook is checkpointed — safe to interrupt and resume.
+
+---
+
+### Option B — Local Setup
+
+#### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/llm-eval-framework
+git clone https://github.com/minw0607/llm-eval-framework.git
 cd llm-eval-framework
 pip install -r requirements.txt
 python -m nltk.downloader punkt wordnet
 ```
 
-### 2. Configure your LLM provider
+#### 2. Configure your LLM provider
 
 ```bash
 cp .env.example .env
-# Uncomment the section for your provider and fill in your credentials
+# Edit .env — uncomment the section for your provider and fill in credentials
 ```
 
 The provider is **auto-detected** from `OPENAI_API_VERSION`:
-- **Set** → Azure OpenAI (`AzureOpenAI` client)
-- **Blank** → OpenAI direct or any compatible endpoint (`OpenAI` client)
+- **Set** (e.g. `2025-04-01-preview`) → Azure OpenAI (`AzureOpenAI` client)
+- **Blank** → OpenAI direct, Ollama, Groq, or any compatible endpoint (`OpenAI` client)
 
-See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step instructions, differences between providers, and troubleshooting.
+See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step instructions for each provider.
 
-### 3. Download HotpotQA data
+#### 3. Get the HotpotQA dataset
 
 ```bash
 mkdir -p data
-# Download hotpot_train_v1.1.json from https://hotpotqa.github.io/
+# Download hotpot_train_v1.1.json (~540 MB) from https://hotpotqa.github.io/
+# Move it to data/hotpot_train_v1.1.json
 # Set HOTPOTQA_DATA_PATH=./data/hotpot_train_v1.1.json in your .env
 ```
 
-### 4. Run the notebook
+> **Why isn't the dataset in the repo?** At 540 MB it exceeds GitHub's 100 MB per-file limit. Download directly from the official source above.
+
+#### 4. (Optional) Use a pre-built vector store
+
+Building the vector store from scratch takes a few minutes. To skip it, place a `.pkl` checkpoint in `checkpoints/` and set `FORCE_REBUILD_VECTOR_STORE=False` (the default) in your `.env`.
+
+> A demo checkpoint for 100 questions (~14 MB) is available on [Google Drive](https://drive.google.com/drive/folders/1sample) — *(link will be updated after first run export)*. The full 500-question checkpoint (~12 GB) is too large to host on GitHub; build it locally or contact the repo owner.
+
+#### 5. Run the notebook
 
 ```bash
-jupyter notebook notebooks/rag_eval_hotpotqa.ipynb
+jupyter notebook notebooks/rag_eval_hotpotqa_demo.ipynb
 ```
 
 Run cells in order. The notebook is checkpointed — safe to interrupt and resume.
@@ -249,25 +323,47 @@ Run cells in order. The notebook is checkpointed — safe to interrupt and resum
 llm-eval-framework/
 ├── README.md
 ├── requirements.txt
-├── .env.example           ← Copy to .env and fill in your credentials
+├── .env.example                    ← Copy to .env and fill in credentials (never committed)
 ├── .gitignore
+├── LICENSE
 │
 ├── notebooks/
-│   └── rag_eval_hotpotqa.ipynb   ← Main evaluation notebook
+│   ├── rag_eval_hotpotqa_demo.ipynb      ← ★ Start here — full pipeline, interactive
+│   ├── rag_eval_hotpotqa_full.ipynb      ← Production run (500+ questions)
+│   └── rag_eval_hotpotqa_concise.ipynb   ← Compact version, no markdown narrative
 │
-├── src/                           ← Importable Python modules
-│   ├── config.py                  ← All configuration, reads from .env
-│   ├── metrics.py                 ← 13 evaluation metrics (EvalMetrics class)
-│   ├── cost_tracker.py            ← Generation vs evaluation cost separation
-│   ├── quality_guard.py           ← Real-time embedding-based quality gate
-│   ├── vector_store.py            ← BM25 + dense hybrid retrieval
-│   └── rag_system.py              ← Answer generation with quality gates
+├── src/                                   ← Importable Python modules
+│   ├── config.py                          ← All configuration, reads from .env
+│   ├── data_loader.py                     ← HotpotQA loader, question-centric sampling
+│   ├── vector_store.py                    ← BM25 + dense hybrid retrieval
+│   ├── rag_system.py                      ← Answer generation with 4 prompt variants
+│   ├── metrics.py                         ← 13 evaluation metrics (EvalMetrics class)
+│   ├── quality_guard.py                   ← Real-time embedding-based quality gate
+│   ├── evaluation_runner.py               ← Orchestrates evaluation loop
+│   ├── cost_tracker.py                    ← Generation vs. evaluation cost separation
+│   ├── investigator.py                    ← Failure diagnosis (16 patterns + k-means)
+│   ├── visualizer.py                      ← Dashboard, retrieval, and cascade charts
+│   ├── report_generator.py                ← Auto-generates structured audit report
+│   └── preflight.py                       ← Dependency and credential checks
 │
 ├── docs/
-│   └── provider-setup.md          ← Step-by-step setup for Azure, OpenAI, Ollama, Groq
+│   └── provider-setup.md                  ← Step-by-step setup for Azure, OpenAI, Ollama, Groq
 │
-├── outputs/                       ← Evaluation results (gitignored)
-└── checkpoints/                   ← Vector store + eval checkpoints (gitignored)
+├── reports/                               ← Generated audit reports (gitignored)
+│   └── multi_prompt_eval_results_*_report.md
+│
+├── outputs/                               ← Evaluation outputs (gitignored)
+│   ├── multi_prompt_eval_results_*.json   ← Raw results
+│   ├── evaluation_dashboard*.png
+│   ├── retrieval_analysis*.png
+│   ├── cost_cascade_analysis*.png
+│   └── low_quality_analysis*/             ← Failure diagnosis exports
+│
+├── checkpoints/                           ← Vector store checkpoints (gitignored)
+│   └── vs_*.pkl                           ← Auto-loaded on restart; set FORCE_REBUILD=False
+│
+└── data/                                  ← Dataset files (gitignored — download separately)
+    └── hotpot_train_v1.1.json
 ```
 
 ---
@@ -286,13 +382,26 @@ The framework auto-detects your provider from `.env` — no code changes require
 | Provider | `OPENAI_BASE_URL` | Notes |
 |---|---|---|
 | **Azure OpenAI** | `https://<resource>.openai.azure.com` | Set `OPENAI_API_VERSION` |
-| **OpenAI (direct)** | `https://api.openai.com/v1` | — |
+| **OpenAI (direct)** | `https://api.openai.com/v1` | Default |
 | **Ollama** (local) | `http://localhost:11434/v1` | Set `EMBEDDING_CHOICE=local` |
 | **Groq** | `https://api.groq.com/openai/v1` | — |
 | **Together AI** | `https://api.together.xyz/v1` | — |
 | **LM Studio** | `http://localhost:1234/v1` | — |
 
-See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step setup, Azure vs OpenAI differences, and troubleshooting.
+See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step setup, Azure vs. OpenAI differences, and troubleshooting.
+
+---
+
+## Regulatory Alignment
+
+The evaluation design maps directly to model risk management frameworks:
+
+| Framework | Requirement | How This Framework Addresses It |
+|---|---|---|
+| **SR 26-02** §4.2 | Quantitative performance benchmarking | 13 metrics across correctness, quality, attribution |
+| **SR 26-02** §5.1 | Outcome monitoring and bias testing | QualityGuard gate + failure diagnosis |
+| **NIST AI RMF** MEASURE 2.5 | Ongoing AI output monitoring | Real-time quality gate with per-question audit trail |
+| **NIST AI RMF** GOVERN 1.7 | Transparency and explainability | AI disclosure on every LLM-generated block |
 
 ---
 
@@ -300,14 +409,31 @@ See [docs/provider-setup.md](docs/provider-setup.md) for step-by-step setup, Azu
 
 If you use this framework in your work, please cite the HotpotQA benchmark:
 
-```
-Yang, Z. et al. (2018). HotpotQA: A Dataset for Diverse, Explainable
-Multi-hop Question Answering. EMNLP 2018.
+```bibtex
+@inproceedings{yang2018hotpotqa,
+  title={HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author={Yang, Zhilin and others},
+  booktitle={EMNLP},
+  year={2018}
+}
 ```
 
 And the RAGAS faithfulness metric:
 
+```bibtex
+@article{es2023ragas,
+  title={RAGAS: Automated Evaluation of Retrieval Augmented Generation},
+  author={Es, Shahul and others},
+  journal={arXiv:2309.15217},
+  year={2023}
+}
 ```
-Es, S. et al. (2023). RAGAS: Automated Evaluation of Retrieval Augmented
-Generation. arXiv:2309.15217.
-```
+
+---
+
+<div align="center">
+
+Made with ❤️ for rigorous, reproducible RAG evaluation  
+[Open an issue](https://github.com/minw0607/llm-eval-framework/issues) · [Provider setup guide](docs/provider-setup.md)
+
+</div>

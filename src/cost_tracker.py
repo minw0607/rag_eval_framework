@@ -350,7 +350,14 @@ class CostTracker:
     def _llm_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
         pricing = self.config.OPENAI_PRICING.get(model)
         if not pricing:
-            return 0.0
+            # Azure deployment names don't match OpenAI model IDs — fall back to
+            # the closest base model by prefix, then default to gpt-4o pricing.
+            for base in ("gpt-4o-mini", "gpt-4o", "gpt-4", "gpt-3.5"):
+                if base in model:
+                    pricing = self.config.OPENAI_PRICING.get(base)
+                    break
+            if not pricing:
+                pricing = self.config.OPENAI_PRICING.get("gpt-4o")  # safe default
         return (input_tokens / 1e6) * pricing["input"] + (output_tokens / 1e6) * pricing["output"]
 
     def _emb_cost(self, tokens: int, model: str) -> float:
