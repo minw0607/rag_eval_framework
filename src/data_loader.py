@@ -12,6 +12,7 @@ sample_questions(data, config)
 
 import json
 import random
+from pathlib import Path
 from difflib import SequenceMatcher
 
 import numpy as np
@@ -37,6 +38,20 @@ def load_hotpotqa(data_file_path) -> tuple:
         document_library — {doc_id: {title, content, sentences, doc_id}, …}
     """
     print("Loading HotpotQA data...")
+
+    if not Path(data_file_path).exists():
+        raise FileNotFoundError(
+            f"\n\n{'='*65}\n"
+            f"  HotpotQA data file not found:\n"
+            f"    {data_file_path}\n\n"
+            f"  To fix this:\n"
+            f"  1. Download hotpot_train_v1.1.json (~540 MB) from:\n"
+            f"       https://hotpotqa.github.io/\n"
+            f"  2. Place it at the path above (create the folder if needed).\n"
+            f"  3. Update HOTPOTQA_DATA_PATH in your .env if using a\n"
+            f"     different location.\n"
+            f"{'='*65}\n"
+        )
 
     with open(data_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
