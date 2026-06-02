@@ -54,6 +54,39 @@ This framework answers **five** — and generates an audit-ready report that tel
 
 ---
 
+## Sample Results
+
+*Generated from a 100-question HotpotQA run (`text-embedding-3-small`, RAGAS LLM-as-judge). All charts produced automatically by the framework.*
+
+### Multi-Prompt Evaluation Dashboard
+
+Accuracy by variant, quality-metric heatmap, faithfulness distribution, and refusal/citation rates — at a glance across all four prompt strategies.
+
+![Evaluation Dashboard](assets/evaluation_dashboard.png)
+
+### Cost & Completeness Cascade
+
+Generation vs. evaluation cost separation (left), the ~20% Tier-2 LLM trigger rate of the completeness cascade (centre), and how the cascade lifts embedding-only scores (right).
+
+![Cost & Cascade Analysis](assets/cost_cascade_analysis.png)
+
+### Retrieval Quality
+
+Hit-rate distribution against the 70% target, and the correlation between retrieval hit rate and answer F1 per variant.
+
+![Retrieval Analysis](assets/retrieval_analysis.png)
+
+### 📄 Sample Audit Report
+
+A full auto-generated audit report from the same run is included in the repo:
+
+- **[View the Markdown report](reports/multi_prompt_eval_results_100_report.md)** — renders directly on GitHub
+- **[Download the PDF report](reports/multi_prompt_eval_results_100_report.pdf)** — print-ready, ~1.5 MB
+
+The report walks through all 12 sections: executive summary, evaluation scope, metric definitions, per-category results with observation tables, failure diagnosis, cost analysis, and reproduction steps.
+
+---
+
 ## 13 Evaluation Metrics
 
 Metrics are grouped into three categories that map directly to the report sections:
@@ -349,8 +382,11 @@ llm-eval-framework/
 ├── docs/
 │   └── provider-setup.md                  ← Step-by-step setup for Azure, OpenAI, Ollama, Groq
 │
-├── reports/                               ← Generated audit reports (gitignored)
-│   └── multi_prompt_eval_results_*_report.md
+├── assets/                                ← Sample visualizations shown in this README
+│
+├── reports/                               ← Audit reports (sample run committed; fresh runs here)
+│   ├── multi_prompt_eval_results_100_report.md    ← ★ Sample report (rendered above)
+│   └── multi_prompt_eval_results_100_report.pdf   ← ★ Print-ready PDF
 │
 ├── outputs/                               ← Evaluation outputs (gitignored)
 │   ├── multi_prompt_eval_results_*.json   ← Raw results

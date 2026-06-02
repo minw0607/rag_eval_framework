@@ -758,15 +758,15 @@ The current Baseline implementation partially satisfies SR 26-02 / NIST AI RMF a
 
 ### 14.1 Main Evaluation Dashboard (`evaluation_dashboard.png`)
 
-![Evaluation Dashboard](../outputs/evaluation_dashboard.png)
+![Evaluation Dashboard](../assets/evaluation_dashboard.png)
 
 ### 14.2 Retrieval Quality Analysis (`retrieval_analysis.png`)
 
-![Retrieval Analysis](../outputs/retrieval_analysis.png)
+![Retrieval Analysis](../assets/retrieval_analysis.png)
 
 ### 14.3 Cost & Cascade Analysis (`cost_cascade_analysis.png`)
 
-![Cost & Cascade Analysis](../outputs/cost_cascade_analysis.png)
+![Cost & Cascade Analysis](../assets/cost_cascade_analysis.png)
 
 ---
 
