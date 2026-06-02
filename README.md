@@ -304,8 +304,8 @@ The notebook is checkpointed — safe to interrupt and resume.
 #### 1. Clone and install
 
 ```bash
-git clone https://github.com/minw0607/llm-eval-framework.git
-cd llm-eval-framework
+git clone https://github.com/minw0607/rag_eval_framework.git
+cd rag_eval_framework
 pip install -r requirements.txt
 python -m nltk.downloader punkt wordnet
 ```
@@ -334,11 +334,31 @@ mkdir -p data
 
 > **Why isn't the dataset in the repo?** At 540 MB it exceeds GitHub's 100 MB per-file limit. Download directly from the official source above.
 
-#### 4. (Optional) Use a pre-built vector store
+#### 4. Vector store — build your own (recommended) or download a demo checkpoint
 
-Building the vector store from scratch takes a few minutes. To skip it, place a `.pkl` checkpoint in `checkpoints/` and set `FORCE_REBUILD_VECTOR_STORE=False` (the default) in your `.env`.
+**Recommended — build your own:**
 
-> A demo checkpoint for 100 questions (~14 MB) is available on [Google Drive](https://drive.google.com/drive/folders/1sample) — *(link will be updated after first run export)*. The full 500-question checkpoint (~12 GB) is too large to host on GitHub; build it locally or contact the repo owner.
+The notebook builds the vector store automatically on first run and caches it in `checkpoints/`. Subsequent runs load from cache instantly. This is the right path if you plan to run your own evaluation.
+
+**Quick demo — download a pre-built checkpoint (~14 MB):**
+
+If you just want to explore the notebook output without waiting for a build, a pre-built checkpoint (999 documents, matches the sample run in `reports/`) is hosted on Google Drive:
+
+```bash
+mkdir -p checkpoints
+# Download the checkpoint:
+# https://drive.google.com/uc?export=download&id=10Ii-jOFefqfOe6AVBjcTL_HotYp6H4ge
+# Save it as: checkpoints/vs_999_docs_small.pkl
+```
+
+Then in your `.env` (already the default):
+```
+FORCE_REBUILD_VECTOR_STORE=False
+```
+
+The notebook will auto-detect and load it — no build step needed.
+
+> **Note:** The demo checkpoint covers ~999 HotpotQA documents. For a full evaluation run, build your own vector store from the complete dataset.
 
 #### 5. Run the notebook
 
