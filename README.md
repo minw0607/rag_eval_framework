@@ -16,6 +16,8 @@
 
 </div>
 
+> **Status:** Independent personal research project
+
 ---
 
 ## Why This Framework
@@ -458,6 +460,18 @@ The evaluation design maps directly to model risk management frameworks:
 | **SR 26-02** §5.1 | Outcome monitoring and bias testing | QualityGuard gate + failure diagnosis |
 | **NIST AI RMF** MEASURE 2.5 | Ongoing AI output monitoring | Real-time quality gate with per-question audit trail |
 | **NIST AI RMF** GOVERN 1.7 | Transparency and explainability | AI disclosure on every LLM-generated block |
+
+---
+
+## Disclaimer
+
+This repository is an independent personal project created outside of my employment using my own time and equipment.
+
+Unless explicitly stated otherwise, the code, notebooks, demonstrations, analyses, and documentation in this repository are developed independently from publicly available research papers, technical documentation, regulations, and other public sources. They do not rely on, incorporate, or disclose any confidential, proprietary, non-public, or client information obtained through my employment or professional engagements.
+
+The views, designs, implementations, and conclusions expressed in this repository are solely my own and do not represent the views of any employer, client, or affiliated organization.
+
+This repository is provided for research and educational purposes only.
 
 ---
 
