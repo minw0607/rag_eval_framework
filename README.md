@@ -273,9 +273,22 @@ EVALUATION COSTS (framework):
 
 **Temperature 0.2, not 1.0** — HotpotQA is a factoid benchmark. Deterministic generation produces measurably higher F1 and faithfulness. Temperature 1.0 was the single largest source of score variance in baseline experiments.
 
-**Top-K 20, not 5** — HotpotQA multi-hop questions require evidence from 2+ documents. K=5 caused frequent retrieval misses; K=20 with hybrid re-ranking captures both gold documents reliably.
+**How hybrid retrieval works — BM25 + dense embeddings, 60/40 weighted**
 
-**Hybrid retrieval (BM25 + dense, 60/40), not dense-only** — BM25 catches exact entity matches (names, dates, locations) that semantic embeddings sometimes miss. The split was tuned empirically on the HotpotQA dev set.
+Every query goes through two independent ranking passes over the full document corpus:
+
+| Pass | Method | What it measures |
+|---|---|---|
+| Dense (semantic) | Cosine similarity between query embedding and document embeddings | Meaning and intent — catches paraphrase, synonyms |
+| Sparse (keyword) | BM25 score — term frequency weighted by inverse document frequency | Exact word matches — names, dates, locations, identifiers |
+
+BM25 (*Best Match 25*, Okapi variant) is a classical information-retrieval algorithm. It scores each document by how often the query's words appear in it, discounted by how common those words are across the entire corpus. A word like *"the"* barely moves the score; a rare word like *"Okapi"* moves it a lot. Unlike embeddings, BM25 is entirely arithmetic — no neural network, no API call, computed in milliseconds.
+
+After both passes, scores are **min-max normalised independently** (so neither pass dominates due to scale differences), then **combined into a single score**: `0.6 × semantic + 0.4 × BM25`. The top-K documents from this single merged ranking are passed to the LLM as context.
+
+The 60/40 split was tuned empirically on the HotpotQA dev set — semantic search handles the majority of cases (paraphrased questions, indirect references) while BM25 acts as a safety net for exact entity matches that embeddings sometimes miss.
+
+**Top-K 20, not 5** — Top-K is the number of documents taken from the final merged ranking to assemble the LLM's context window. HotpotQA is a *multi-hop* benchmark: most questions require evidence from 2 separate gold documents. With K=5, one of the two gold documents was frequently absent from the context, making the question unanswerable regardless of generation quality. K=20 gives sufficient coverage to reliably include both gold documents, at the cost of a larger (but bounded) context passed to the LLM.
 
 **Completeness cascade, not a single score** — A single embedding completeness score fails silently for short answers and when context shares vocabulary without factual agreement. The cascade triggers LLM verification only when evidence suggests the embedding score is unreliable.
 
