@@ -117,9 +117,11 @@ Metrics are grouped into three categories that map directly to the report sectio
 | # | Metric | Method | Cost |
 |---|--------|--------|------|
 | 10 | **Context Relevance** | cosine_sim(context, question) | Embedding |
-| 11 | **Groundedness** | MiniMax avg_i max_j sim(ans_sent_i, ctx_sent_j) | Embedding |
-| 12 | **RAGAS Faithfulness** | Atomic claim extraction → LLM entailment check | LLM †† |
+| 11 | **Groundedness** | Embedding: avg_i max_j sim(ans_sent_i, ctx_sent_j) — sentence-level overlap | Embedding |
+| 12 | **RAGAS Faithfulness** | LLM: extract atomic claims → verify each claim is supported by context (YES/NO) | LLM †† |
 | 13 | **SNR** | Ratio of answer words found in retrieved context (word-level overlap) | Free ‡ |
+
+> **Groundedness vs. Faithfulness** — both measure answer-to-context attribution, but with different methods. Groundedness uses embedding similarity (fast, handles paraphrase, but can be fooled by vocabulary overlap without factual agreement). Faithfulness uses an LLM to verify each factual claim individually (more expensive, but catches hallucinations that happen to share vocabulary with the context). Running both catches failure modes that either metric alone would miss. Neither measures retrieval quality — that is Context Relevance (metric 10).
 
 > **† Embedding cost** — one API call to your embedding model per metric that uses it.  
 > **‡ SNR (Signal-to-Noise Ratio)** — a lightweight lexical heuristic: `SNR = (answer words that appear in retrieved context) ÷ (total answer words)`. A score of 0.70 means 70% of the answer's words are directly traceable to the retrieved documents. Low SNR flags answers padded with meta-commentary ("I cannot find...", "Based on the above...") or containing words that never appear in the context — a cheap first-pass hallucination signal. It complements Groundedness (which uses embedding similarity and handles paraphrasing) with a simpler, interpretable word-overlap check. Because it is pure arithmetic on the tokenised text, it costs nothing to compute — no API calls, no model inference.  
