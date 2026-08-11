@@ -135,8 +135,25 @@ Tier 1 — Question-Filtered Context Coverage  (embedding, always runs, free-ish
     │  Filter context sentences by cosine similarity to the question
     │  Score = avg_i max_j sim(relevant_ctx_i, answer_sent_j)
     │
-    ├── Trigger B: |completeness_T1 − groundedness| > 0.3   (cross-metric disagreement;
-    │              completeness_T1 = Tier 1 embedding score computed just above)
+    ├── Trigger B: |completeness_T1 − groundedness| > 0.3   (cross-metric disagreement)
+    │            : |completeness_T1 − faithfulness | > 0.3
+    │
+    │   completeness_T1 = Tier 1 embedding score computed just above.
+    │   groundedness and faithfulness are independent embedding / LLM scores
+    │   that measure answer-to-context alignment from different angles.
+    │
+    │   Rationale: all three metrics should roughly agree when the embedding
+    │   completeness score is reliable. A gap > 0.3 (30 pp) between completeness
+    │   and either peer metric is a signal that the embedding score is an outlier —
+    │   likely a false positive caused by vocabulary overlap without factual
+    │   agreement, or a false negative on paraphrased content.
+    │
+    │   The 0.3 threshold is a calibrated hyperparameter, not formally derived.
+    │   It was set empirically to balance two risks:
+    │     • too low  → triggers fire on normal score variance, wasting LLM calls
+    │     • too high → genuine embedding failures slip through unchecked
+    │   It is exposed as `cross_metric_delta` in the code and can be tuned.
+    │
     ├── Trigger C: answer < N words AND ≥ M relevant context sentences (short answer)
     │
     └── No trigger → use Tier 1 score (zero extra cost)
