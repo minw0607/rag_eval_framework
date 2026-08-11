@@ -119,9 +119,10 @@ Metrics are grouped into three categories that map directly to the report sectio
 | 10 | **Context Relevance** | cosine_sim(context, question) | Embedding |
 | 11 | **Groundedness** | MiniMax avg_i max_j sim(ans_sent_i, ctx_sent_j) | Embedding |
 | 12 | **RAGAS Faithfulness** | Atomic claim extraction → LLM entailment check | LLM †† |
-| 13 | **SNR** | Ratio of context-grounded tokens | Free |
+| 13 | **SNR** | Ratio of answer words found in retrieved context (word-level overlap) | Free ‡ |
 
 > **† Embedding cost** — one API call to your embedding model per metric that uses it.  
+> **‡ SNR (Signal-to-Noise Ratio)** — a lightweight lexical heuristic: `SNR = (answer words that appear in retrieved context) ÷ (total answer words)`. A score of 0.70 means 70% of the answer's words are directly traceable to the retrieved documents. Low SNR flags answers padded with meta-commentary ("I cannot find...", "Based on the above...") or containing words that never appear in the context — a cheap first-pass hallucination signal. It complements Groundedness (which uses embedding similarity and handles paraphrasing) with a simpler, interpretable word-overlap check. Because it is pure arithmetic on the tokenised text, it costs nothing to compute — no API calls, no model inference.  
 > **†† LLM cost (RAGAS Faithfulness)** — makes **2+ LLM calls per answer**:  
 > &nbsp;&nbsp;**Call 1 (extraction):** the LLM reads the answer and breaks it into atomic claims — single, indivisible factual statements (e.g. *"The Eiffel Tower is in Paris"* rather than *"The Eiffel Tower is in Paris and was built in 1889"*).  
 > &nbsp;&nbsp;**Call 2…N (verification):** for each extracted claim, a separate LLM call asks whether the retrieved context supports that claim (YES/NO). The final score = verified claims ÷ total claims.  
