@@ -135,7 +135,8 @@ Tier 1 — Question-Filtered Context Coverage  (embedding, always runs, free-ish
     │  Filter context sentences by cosine similarity to the question
     │  Score = avg_i max_j sim(relevant_ctx_i, answer_sent_j)
     │
-    ├── Trigger B: |completeness − groundedness| > 0.3   (cross-metric disagreement)
+    ├── Trigger B: |completeness_T1 − groundedness| > 0.3   (cross-metric disagreement;
+    │              completeness_T1 = Tier 1 embedding score computed just above)
     ├── Trigger C: answer < N words AND ≥ M relevant context sentences (short answer)
     │
     └── No trigger → use Tier 1 score (zero extra cost)
